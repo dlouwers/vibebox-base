@@ -26,6 +26,9 @@ RUN npm install -g opencode-ai vibebox
 # Create sandbox workspace with open permissions
 RUN mkdir -p /workspaces && chmod 777 /workspaces
 
+# Copy security configuration
+COPY vibebox.toml /etc/vibebox.toml
+
 # Set working directory
 WORKDIR /workspaces
 
