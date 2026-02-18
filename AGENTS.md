@@ -15,6 +15,7 @@
 * Go to Repo Settings -> Secrets and variables -> Actions -> New Repository Secret.
 * `DOCKERHUB_USERNAME`: Your Docker ID.
 * `DOCKERHUB_TOKEN`: The Access Token you just generated.
+* [ ] **Configure Branch Protection (Optional but Recommended):** See [Branch Protection Setup](#-branch-protection-setup-optional) below.
 
 
 
@@ -121,3 +122,149 @@ Create a Dependabot configuration.
 * **DockerHub push fails:** Verify `DOCKERHUB_TOKEN` secret is valid and has write permissions.
 * **Dependabot PRs fail:** Review logs to identify if base image or action version has breaking changes.
 * **Multi-arch build takes longer:** Building for both AMD64 and ARM64 typically takes 3-5 minutes (normal).
+
+---
+
+## 🔒 Branch Protection Setup (Optional)
+
+*Recommended for production repositories to prevent accidental force pushes and ensure code review.*
+
+### Why Branch Protection?
+
+Branch protection rules enforce quality gates on the `main` branch:
+- Prevents direct pushes (requires pull requests)
+- Requires code review approvals before merge
+- Ensures CI/CD checks pass before merge
+- Requires conversation resolution
+- Protects against accidental history rewrites
+
+### Manual Setup Instructions
+
+**Step 1: Navigate to Settings**
+1. Go to https://github.com/dlouwers/vibebox-base
+2. Click **Settings** tab (requires owner/admin access)
+3. Click **Branches** in the left sidebar
+
+**Step 2: Add Branch Protection Rule**
+1. Click **Add rule** or **Add branch protection rule**
+2. In **Branch name pattern**, enter: `main`
+
+**Step 3: Configure Protection Rules**
+
+Enable these recommended settings:
+
+**Required Approvals:**
+- ☑ **Require a pull request before merging**
+  - ☑ Require approvals: `1`
+  - ☑ Dismiss stale pull request approvals when new commits are pushed
+  - ☑ Require review from Code Owners (optional, requires CODEOWNERS file)
+
+**Status Checks:**
+- ☑ **Require status checks to pass before merging**
+  - ☑ Require branches to be up to date before merging
+  - In the search box, type `build` and select the GitHub Actions workflow check
+
+**Additional Protections:**
+- ☑ **Require conversation resolution before merging**
+- ☑ **Require signed commits** (optional, recommended for security)
+- ☑ **Include administrators** (applies rules to repo admins too)
+- ☑ **Restrict who can push to matching branches** (optional, for team repositories)
+
+**Step 4: Save**
+Click **Create** at the bottom.
+
+### Testing Branch Protection
+
+After enabling, verify it works:
+
+```bash
+# Create a test branch
+git checkout -b test-branch-protection
+
+# Make a small change
+echo "# Test" >> README.md
+git add README.md
+git commit -m "Test branch protection"
+git push origin test-branch-protection
+
+# Try to push directly to main (should fail)
+git checkout main
+git merge test-branch-protection
+git push origin main  # Should be rejected
+```
+
+**Expected Result:** Direct push to `main` is rejected. You must create a pull request instead.
+
+### Best Practices
+
+1. **Enable Early:** Set up branch protection before inviting collaborators.
+2. **Include Admins:** Check "Include administrators" to ensure everyone follows the same process.
+3. **Status Checks:** Always require CI/CD checks to pass (prevents broken builds).
+4. **Code Owners:** For larger teams, create a `.github/CODEOWNERS` file to auto-assign reviewers.
+5. **Signed Commits:** Require GPG/SSH signed commits for supply chain security.
+
+### Branch Protection for Teams
+
+For multi-person teams, consider additional settings:
+
+**Require Multiple Approvals:**
+- Set "Require approvals" to `2` or more for critical repositories
+
+**Restrict Push Access:**
+- Use "Restrict who can push to matching branches" to limit who can bypass PR requirements
+
+**Code Owners:**
+Create `.github/CODEOWNERS`:
+```
+# Dockerfile and CI/CD changes require security team review
+Dockerfile @security-team
+.github/ @devops-team
+
+# Everything else requires at least one maintainer review
+* @maintainers
+```
+
+### Automation (Advanced)
+
+For organizations managing multiple repositories, automate branch protection using GitHub API:
+
+```bash
+# Using GitHub CLI (requires gh auth login)
+gh api repos/dlouwers/vibebox-base/branches/main/protection \
+  --method PUT \
+  --input - <<EOF
+{
+  "required_status_checks": {
+    "strict": true,
+    "contexts": ["build"]
+  },
+  "enforce_admins": true,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews": true
+  },
+  "restrictions": null,
+  "required_conversation_resolution": true
+}
+EOF
+```
+
+**Note:** API automation requires a Personal Access Token with `repo` scope.
+
+### Troubleshooting
+
+**"I can't see the Settings tab"**
+- You need owner or admin access to the repository.
+
+**"Branch protection rule not enforced"**
+- Make sure "Include administrators" is checked if you're testing as an admin.
+- Verify the branch name pattern exactly matches `main`.
+
+**"Status check not appearing"**
+- The check must run at least once before it appears in the list.
+- Push a commit to trigger the GitHub Actions workflow, then return to configure branch protection.
+
+**"Can't merge PR even though checks passed"**
+- Check if "Require branches to be up to date" is enabled. If so, rebase your PR branch.
+- Ensure all required conversations are resolved.
+
