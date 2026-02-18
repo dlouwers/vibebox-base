@@ -1,7 +1,7 @@
 # VibeBox Base Image
 # Secure foundation for Vibe Coding agents
 
-FROM mcr.microsoft.com/devcontainers/base:debian-bookworm
+FROM mcr.microsoft.com/devcontainers/base:1-bookworm
 
 # OCI Labels
 LABEL org.opencontainers.image.source="https://github.com/dlouwers/vibebox-base"
