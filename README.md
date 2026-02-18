@@ -7,6 +7,7 @@ Secure, reusable Docker base image for Vibe Coding agents. Provides isolated too
 
 ## Features
 
+- **Multi-Architecture Support**: Native support for AMD64 (x86_64) and ARM64 (Apple Silicon, Raspberry Pi)
 - **Debian Bookworm Base**: Stable, slim foundation from Microsoft Dev Containers
 - **Pre-installed Tools**: `opencode-ai`, `vibebox`, Node.js, npm
 - **Security First**: Strict isolation via `vibebox.toml` with blocked sensitive paths
@@ -20,6 +21,8 @@ Secure, reusable Docker base image for Vibe Coding agents. Provides isolated too
 ```bash
 docker pull dlouwers/vibebox-base:latest
 ```
+
+The image automatically pulls the correct architecture for your platform (AMD64 or ARM64).
 
 ### Run Interactive Container
 
@@ -35,6 +38,15 @@ FROM dlouwers/vibebox-base:latest
 # Your custom agent setup here
 COPY ./agent-config /workspaces/config
 ```
+
+## Supported Architectures
+
+This image supports multiple architectures:
+
+- `linux/amd64` - x86_64 processors (Intel, AMD)
+- `linux/arm64` - ARM64 processors (Apple Silicon M1/M2/M3, Raspberry Pi 4/5)
+
+Docker automatically selects the correct image for your platform.
 
 ## Security Configuration
 

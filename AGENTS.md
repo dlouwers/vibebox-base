@@ -1,6 +1,6 @@
 **Objective:** Create a reusable, open-source "VibeBox Base" Docker image. This image will serve as a secure foundation for Vibe Coding agents, decoupling tooling from domain logic.
 
-**Output:** A published Docker image on DockerHub (`your-username/vibebox-base`) updated automatically via GitHub Actions.
+**Output:** A published multi-arch Docker image on DockerHub (`dlouwers/vibebox-base`) supporting AMD64 and ARM64 architectures, updated automatically via GitHub Actions.
 
 ---
 
@@ -120,4 +120,4 @@ Create a Dependabot configuration.
 * **Build fails with "image not found":** Check base image tag is valid at https://mcr.microsoft.com
 * **DockerHub push fails:** Verify `DOCKERHUB_TOKEN` secret is valid and has write permissions.
 * **Dependabot PRs fail:** Review logs to identify if base image or action version has breaking changes.
-* **Image pull fails on ARM64 (Apple Silicon):** The image is currently built for AMD64 only. Consider adding multi-arch build support in the future.
+* **Multi-arch build takes longer:** Building for both AMD64 and ARM64 typically takes 3-5 minutes (normal).
