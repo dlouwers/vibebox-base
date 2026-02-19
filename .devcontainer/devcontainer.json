@@ -1,0 +1,27 @@
+{
+  "name": "Vibe Coding Environment",
+  "image": "dlouwers/vibebox-base:latest",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Vibe Kanban",
+      "onAutoForward": "notify"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "bloopai.vibe-kanban"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  }
+}
