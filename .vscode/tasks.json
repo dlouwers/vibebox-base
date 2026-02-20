@@ -2,16 +2,27 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Start Vibe Kanban",
+      "label": "Kanban Dashboard",
       "type": "shell",
-      "command": "HOST=0.0.0.0 PORT=3000 npx --yes vibe-kanban",
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "focus": false
+      "command": "openkanban",
+      "options": {
+        "env": {
+          "OPENCODE_PORT": "4096"
+        }
       },
-      "isBackground": true
+      "runOptions": {
+        "runOn": "folderOpen",
+        "instanceLimit": 1 // This prevents VS Code from trying to spawn it again if it's already there
+    },
+      "presentation": {
+        "echo": false,
+        "reveal": "always",
+        "focus": true, // Changed to true so the dashboard is active immediately
+        "panel": "dedicated", // Use 'dedicated' so it persists across restarts
+        "clear": true,
+        "group": "dashboard" // Groups it logically
+      },
+      "problemMatcher": []
     }
   ]
 }

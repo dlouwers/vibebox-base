@@ -29,6 +29,7 @@ Secure, reusable Docker base image for Vibe Coding agents. Provides isolated too
   - `vibebox`: CLI for sandbox boundary management and security enforcement
   - `oh-my-opencode`: OpenCode plugin harness for multi-agent orchestration
   - Node.js & npm: Required runtime for agent tooling (not for language-specific development)
+- **Hybrid Architecture**: Supports running vibe-kanban on host with containerized agents
 - **Security First**: Strict isolation via `vibebox.toml` with blocked sensitive paths
 - **CI/CD Ready**: Automated builds and publishing via GitHub Actions
 - **Auto-updates**: Dependabot monitoring for base image and action updates
@@ -222,37 +223,128 @@ See [`vibebox.toml`](./vibebox.toml) for the default configuration.
 
 ## Using Additional Tools
 
-### Vibe Kanban
+### Vibe Kanban (Recommended Architecture: Host + Container)
 
-[Vibe Kanban](https://vibekanban.com) is a task management tool that integrates with your project. It's designed to run on-demand from within your workspace, not as a background service.
+[Vibe Kanban](https://vibekanban.com) is a task management tool that integrates with your project. Due to upstream network binding limitations ([issue #1647](https://github.com/BloopAI/vibe-kanban/issues/1647)), the recommended setup is to run vibe-kanban on your **host machine** while agents execute in the **container**.
 
-**Usage from within the container:**
+#### Architecture Overview
 
-```bash
-# Navigate to your project directory
-cd /workspaces/my-project
-
-# Start Vibe Kanban (auto-confirms installation)
-npx --yes vibe-kanban
+```
+┌─────────────────────────────────────┐
+│  HOST MACHINE                       │
+│  ├─ Vibe Kanban (Web UI)           │  ← Runs natively (no network issues)
+│  ├─ Git Worktrees                  │  ← Managed by vibe-kanban
+│  └─ Spawns: docker exec ...        │  ← Executes agents in container
+│                  ↓                  │
+│  ┌─────────────────────────────┐   │
+│  │ CONTAINER (vibebox-container)│  │
+│  │  ├─ opencode-ai              │   │  ← Agent runs isolated
+│  │  ├─ oh-my-opencode           │   │
+│  │  └─ /vibe-workspaces/        │   │  ← Mounted from host
+│  └─────────────────────────────┘   │
+└─────────────────────────────────────┘
 ```
 
-**Or use the VSCode task:**
-- Press `F1` → "Tasks: Run Task" → "Start Vibe Kanban"
-- The web UI will open automatically at http://localhost:3000
+#### Setup Instructions
 
-Vibe Kanban will:
-- Create git worktrees for task isolation
-- Launch a web UI (typically on port 3000)
-- Provide a Kanban board for task management
-
-**Port forwarding:** When using Dev Containers, VS Code/IntelliJ will automatically detect and forward port 3000. You can also manually forward ports:
+**Step 1: Install vibe-kanban on your host machine**
 
 ```bash
-# Docker run with port forwarding
-docker run -it --rm -p 3000:3000 -v $(pwd):/workspaces dlouwers/vibebox-base:latest
+npm install -g vibe-kanban
 ```
 
-**Note:** Vibe Kanban requires user interaction to start and is intended for interactive development sessions, not as an always-on service.
+**Step 2: Start the devcontainer**
+
+Open your project in VS Code and reopen in container (`F1` → "Dev Containers: Reopen in Container"). This will:
+- Start a container named `vibebox-container`
+- Mount `~/.vibe-kanban-workspaces` to `/vibe-workspaces` in the container
+- Mount `~/.config/opencode` to `/root/.config/opencode` (for agent configuration)
+
+**Step 3: Configure vibe-kanban agent profile**
+
+Create or edit `~/.vibe-kanban/profiles.json` on your **host machine**:
+
+```json
+{
+  "executors": {
+    "OPENCODE": {
+      "DOCKER_CONTAINER": {
+        "OPENCODE": {
+          "auto_approve": false,
+          "auto_compact": true,
+          "base_command_override": "docker exec -i vibebox-container npx -y opencode-ai serve --hostname 0.0.0.0 --port 8080",
+          "env": {
+            "OPENCODE_PERMISSION": "{\"question\":\"allow\"}",
+            "NODE_NO_WARNINGS": "1",
+            "NPM_CONFIG_LOGLEVEL": "error"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Alternative:** A sample profile is included in this repository at `.vibe-kanban-profile.json`. You can copy it:
+
+```bash
+# Copy example profile to vibe-kanban config directory
+mkdir -p ~/.vibe-kanban
+cp .vibe-kanban-profile.json ~/.vibe-kanban/profiles.json
+```
+
+**Step 4: Start vibe-kanban on host**
+
+```bash
+# From your host terminal (not inside the container)
+vibe-kanban
+```
+
+The web UI will open at http://localhost:3000 ✅ (works perfectly on host)
+
+**Step 5: Select the DOCKER_CONTAINER agent profile**
+
+In Vibe Kanban UI:
+1. Go to Settings → Agents
+2. Select "OPENCODE" → "DOCKER_CONTAINER" variant
+3. Start a workspace - the agent will execute inside the container
+
+#### How It Works
+
+1. **Vibe-kanban runs on host** - No network binding issues, native performance
+2. **Worktrees created on host** - In `~/.vibe-kanban-workspaces/` directory
+3. **Agent spawned via docker exec** - `docker exec -i vibebox-container opencode-ai`
+4. **Communication via stdio** - Vibe-kanban pipes stdin/stdout through docker exec
+5. **Container accesses worktrees** - Via mounted volume at `/vibe-workspaces/`
+
+#### Benefits of This Architecture
+
+✅ **No network binding issues** - Vibe-kanban runs natively on host  
+✅ **Agent isolation** - OpenCode runs in secure container  
+✅ **Shared configuration** - `~/.config/opencode` accessible to both host and container  
+✅ **File system consistency** - Worktrees on host, accessible in container via mount  
+✅ **Flexible** - Can switch between container and native agents easily  
+
+#### Troubleshooting
+
+**Issue: "Cannot connect to Docker daemon"**
+- Ensure Docker Desktop is running
+- Verify `vibebox-container` exists: `docker ps | grep vibebox-container`
+- If not running, open VS Code and reopen in container
+
+**Issue: "Error: ENOENT: no such file or directory"**
+- Check that `~/.vibe-kanban-workspaces` exists: `mkdir -p ~/.vibe-kanban-workspaces`
+- Verify the devcontainer is running with correct mounts: `docker inspect vibebox-container | grep vibe-workspaces`
+
+**Issue: Agent not responding**
+- Check container logs: `docker logs vibebox-container`
+- Verify opencode-ai is available: `docker exec vibebox-container which opencode-ai`
+- Test manual execution: `docker exec -it vibebox-container npx -y opencode-ai --version`
+
+**Issue: Worktree path mismatches**
+- Vibe-kanban creates worktrees on host at `~/.vibe-kanban-workspaces/`
+- These are mounted to `/vibe-workspaces/` in container
+- Ensure paths in your project configuration account for this mapping
 
 ## Development
 

@@ -1,28 +1,25 @@
 {
-  "name": "Vibe Coding Environment",
-  "image": "dlouwers/vibebox-base:latest",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
-  "forwardPorts": [3000],
-  "portsAttributes": {
-    "3000": {
-      "label": "Vibe Kanban",
-      "onAutoForward": "openBrowser"
-    }
+  "name": "OpenKanban Agent Workspace",
+  "build": {
+    "dockerfile": "Dockerfile"
   },
-  "containerEnv": {
-    "HOST": "0.0.0.0",
-    "PORT": "3000"
-  },
+  "remoteUser": "node",
+  "initializeCommand": "mkdir -p ${localEnv:HOME}/.config/openkanban ${localEnv:HOME}/.config/opencode ${localEnv:HOME}/.local/share/opencode ${localEnv:HOME}/.local/state/opencode",
+  "mounts": [
+    "source=${localEnv:HOME}/.config/openkanban,target=/home/node/.config/openkanban,type=bind",
+    "source=${localEnv:HOME}/.config/opencode,target=/home/node/.config/opencode,type=bind",
+    "source=${localEnv:HOME}/.local/share/opencode,target=/home/node/.local/share/opencode,type=bind",
+    "source=${localEnv:HOME}/.local/state/opencode,target=/home/node/.local/state/opencode,type=bind"
+  ],
+  "postStartCommand": "bash .devcontainer/post-start.sh",
   "customizations": {
     "vscode": {
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash"
-      }
+      },
+      "extensions": [
+        "fabiospampinato.vscode-terminals"
+      ]
     }
-  },
-  "remoteUser": "vscode",
-  "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
   }
 }
