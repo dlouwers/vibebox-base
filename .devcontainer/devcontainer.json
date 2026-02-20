@@ -1,5 +1,5 @@
 {
-  "name": "VibeBox",
+  "name": "OpenCode Base Dev Container",
   "build": {
     "dockerfile": "../Dockerfile"
   },

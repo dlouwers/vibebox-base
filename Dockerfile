@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/javascript-node:20
 
-LABEL org.opencontainers.image.source="https://github.com/dlouwers/vibebox-base"
+LABEL org.opencontainers.image.source="https://github.com/dlouwers/opencode-base"
 LABEL org.opencontainers.image.description="Secure devcontainer for Vibe Coding agents"
 LABEL org.opencontainers.image.licenses="MIT"
 
