@@ -76,10 +76,14 @@ echo "---------------------------"
 # Test workspace
 if [ -d "/workspaces" ]; then
     test_pass "/workspaces directory exists"
-    if [ -w "/workspaces" ]; then
-        test_pass "/workspaces is writable"
+    
+    WORKSPACE_DIR=$(ls -d /workspaces/*/ 2>/dev/null | head -1)
+    if [ -n "$WORKSPACE_DIR" ] && [ -w "$WORKSPACE_DIR" ]; then
+        test_pass "Workspace project directory is writable"
+    elif [ -w "/workspaces" ]; then
+        test_pass "/workspaces mount point is writable"
     else
-        test_fail "/workspaces is NOT writable"
+        test_warn "/workspaces mount point owned by root (normal for Docker mounts)"
     fi
 else
     test_fail "/workspaces directory does NOT exist"
@@ -147,9 +151,13 @@ echo ""
 echo "6. Testing OpenCode Engine"
 echo "--------------------------"
 
-# Check if OpenCode engine is running
-if curl -s http://localhost:4096 > /dev/null 2>&1; then
-    test_pass "OpenCode engine is running on port 4096"
+if ps aux | grep -v grep | grep -q "opencode serve"; then
+    test_pass "OpenCode engine process is running"
+    if curl -s http://localhost:4096 > /dev/null 2>&1; then
+        test_pass "OpenCode engine is responding on port 4096"
+    else
+        test_warn "OpenCode engine process running but not responding on port 4096"
+    fi
 else
     test_warn "OpenCode engine is NOT running (post-start.sh should start it)"
 fi
@@ -162,11 +170,16 @@ WORKSPACE_NAME=$(ls /workspaces 2>/dev/null | grep -v worktrees | head -1)
 if [ -n "$WORKSPACE_NAME" ]; then
     test_pass "Found workspace: $WORKSPACE_NAME"
     
-    # Check if workspace is a git safe directory
-    if git config --global --get-all safe.directory | grep -q "/workspaces/$WORKSPACE_NAME" 2>/dev/null; then
+    if git config --global --get-all safe.directory | grep -qE "(\*|/workspaces/$WORKSPACE_NAME)" 2>/dev/null; then
         test_pass "Workspace is marked as git safe.directory"
     else
         test_warn "Workspace NOT marked as git safe.directory (post-start.sh may fix this)"
+    fi
+    
+    if git rev-parse --git-dir >/dev/null 2>&1; then
+        test_pass "Git repository is accessible"
+    else
+        test_warn "Git repository not accessible in current directory"
     fi
 else
     test_warn "No workspace found in /workspaces"
