@@ -1,7 +1,7 @@
-# VibeBox Base
+# OpenCode Base
 
-[![Docker Image](https://img.shields.io/docker/v/dlouwers/vibebox-base?label=Docker%20Hub)](https://hub.docker.com/r/dlouwers/vibebox-base)
-[![Build Status](https://github.com/dlouwers/vibebox-base/actions/workflows/publish.yml/badge.svg)](https://github.com/dlouwers/vibebox-base/actions)
+[![Docker Image](https://img.shields.io/docker/v/dlouwers/opencode-base?label=Docker%20Hub)](https://hub.docker.com/r/dlouwers/opencode-base)
+[![Build Status](https://github.com/dlouwers/opencode-base/actions/workflows/publish.yml/badge.svg)](https://github.com/dlouwers/opencode-base/actions)
 
 Secure, reusable Docker base image for Vibe Coding agents. Provides isolated tooling and sandboxed execution environment.
 
@@ -26,11 +26,10 @@ Secure, reusable Docker base image for Vibe Coding agents. Provides isolated too
 - **Debian Bookworm Base**: Stable, slim foundation from Microsoft Dev Containers
 - **Pre-installed Tools**: 
   - `opencode-ai`: Autonomous terminal-based AI coding agent
-  - `vibebox`: CLI for sandbox boundary management and security enforcement
   - `oh-my-opencode`: OpenCode plugin harness for multi-agent orchestration
   - Node.js & npm: Required runtime for agent tooling (not for language-specific development)
 - **Hybrid Architecture**: Supports running vibe-kanban on host with containerized agents
-- **Security First**: Strict isolation via `vibebox.toml` with blocked sensitive paths
+- **Security First**: Strict isolation with blocked sensitive paths
 - **CI/CD Ready**: Automated builds and publishing via GitHub Actions
 - **Auto-updates**: Dependabot monitoring for base image and action updates
 
@@ -39,7 +38,7 @@ Secure, reusable Docker base image for Vibe Coding agents. Provides isolated too
 ### Pull from DockerHub
 
 ```bash
-docker pull dlouwers/vibebox-base:latest
+docker pull dlouwers/opencode-base:latest
 ```
 
 The image automatically pulls the correct architecture for your platform (AMD64 or ARM64).
@@ -47,13 +46,13 @@ The image automatically pulls the correct architecture for your platform (AMD64 
 ### Run Interactive Container
 
 ```bash
-docker run -it --rm -v $(pwd):/workspaces dlouwers/vibebox-base:latest
+docker run -it --rm -v $(pwd):/workspaces dlouwers/opencode-base:latest
 ```
 
 ### Use in Dockerfile
 
 ```dockerfile
-FROM dlouwers/vibebox-base:latest
+FROM dlouwers/opencode-base:latest
 
 # Your custom agent setup here
 COPY ./agent-config /workspaces/config
@@ -82,7 +81,7 @@ Create a `.devcontainer/devcontainer.json` file in your project:
 ```json
 {
   "name": "Vibe Coding Environment",
-  "image": "dlouwers/vibebox-base:latest",
+  "image": "dlouwers/opencode-base:latest",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
   "forwardPorts": [3000],
@@ -130,7 +129,7 @@ IntelliJ IDEA supports Dev Containers via Docker integration.
 ```json
 {
   "name": "Vibe Coding Environment",
-  "image": "dlouwers/vibebox-base:latest",
+  "image": "dlouwers/opencode-base:latest",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind"
 }
@@ -160,7 +159,7 @@ version: '3.8'
 
 services:
   dev:
-    image: dlouwers/vibebox-base:latest
+    image: dlouwers/opencode-base:latest
     volumes:
       - .:/workspaces:cached
     working_dir: /workspaces
@@ -182,7 +181,7 @@ Then in `.devcontainer/devcontainer.json`:
 
 ## Security Configuration
 
-The image includes `vibebox.toml` with strict isolation and runs as a non-root user (`vscode`) by default for enhanced security.
+The image runs as a non-root user (`vscode`) by default for enhanced security.
 
 ### Default Security Settings
 
@@ -192,34 +191,7 @@ The image includes `vibebox.toml` with strict isolation and runs as a non-root u
 
 ### Customizing Security
 
-You can customize the security configuration by mounting your own `vibebox.toml`:
-
-```bash
-docker run -it --rm \
-  -v $(pwd):/workspaces \
-  -v $(pwd)/custom-vibebox.toml:/etc/vibebox.toml:ro \
-  dlouwers/vibebox-base:latest
-```
-
-**Example custom configuration** to whitelist additional directories:
-
-```toml
-[security]
-mode = "strict"
-
-[mounts]
-allowed = ["/workspaces", "/tmp/shared"]
-read_write = ["/workspaces"]
-
-[blocked_paths]
-paths = [
-    "/root/.ssh",
-    "/home/*/.ssh",
-    "/var/run/docker.sock"
-]
-```
-
-See [`vibebox.toml`](./vibebox.toml) for the default configuration.
+You can customize the security configuration by creating appropriate mount restrictions in your devcontainer configuration.
 
 ## Using Additional Tools
 
@@ -237,7 +209,7 @@ See [`vibebox.toml`](./vibebox.toml) for the default configuration.
 │  └─ Spawns: docker exec ...        │  ← Executes agents in container
 │                  ↓                  │
 │  ┌─────────────────────────────┐   │
-│  │ CONTAINER (vibebox-container)│  │
+│  │ CONTAINER (opencode-dev)    │   │
 │  │  ├─ opencode-ai              │   │  ← Agent runs isolated
 │  │  ├─ oh-my-opencode           │   │
 │  │  └─ /vibe-workspaces/        │   │  ← Mounted from host
@@ -256,7 +228,7 @@ npm install -g vibe-kanban
 **Step 2: Start the devcontainer**
 
 Open your project in VS Code and reopen in container (`F1` → "Dev Containers: Reopen in Container"). This will:
-- Start a container named `vibebox-container`
+- Start a container named `opencode-dev`
 - Mount `~/.vibe-kanban-workspaces` to `/vibe-workspaces` in the container
 - Mount `~/.config/opencode` to `/root/.config/opencode` (for agent configuration)
 
@@ -272,7 +244,7 @@ Create or edit `~/.vibe-kanban/profiles.json` on your **host machine**:
         "OPENCODE": {
           "auto_approve": false,
           "auto_compact": true,
-          "base_command_override": "docker exec -i vibebox-container npx -y opencode-ai serve --hostname 0.0.0.0 --port 8080",
+          "base_command_override": "docker exec -i opencode-dev npx -y opencode-ai serve --hostname 0.0.0.0 --port 8080",
           "env": {
             "OPENCODE_PERMISSION": "{\"question\":\"allow\"}",
             "NODE_NO_WARNINGS": "1",
@@ -313,7 +285,7 @@ In Vibe Kanban UI:
 
 1. **Vibe-kanban runs on host** - No network binding issues, native performance
 2. **Worktrees created on host** - In `~/.vibe-kanban-workspaces/` directory
-3. **Agent spawned via docker exec** - `docker exec -i vibebox-container opencode-ai`
+3. **Agent spawned via docker exec** - `docker exec -i opencode-dev opencode-ai`
 4. **Communication via stdio** - Vibe-kanban pipes stdin/stdout through docker exec
 5. **Container accesses worktrees** - Via mounted volume at `/vibe-workspaces/`
 
@@ -329,17 +301,17 @@ In Vibe Kanban UI:
 
 **Issue: "Cannot connect to Docker daemon"**
 - Ensure Docker Desktop is running
-- Verify `vibebox-container` exists: `docker ps | grep vibebox-container`
+- Verify `opencode-dev` exists: `docker ps | grep opencode-dev`
 - If not running, open VS Code and reopen in container
 
 **Issue: "Error: ENOENT: no such file or directory"**
 - Check that `~/.vibe-kanban-workspaces` exists: `mkdir -p ~/.vibe-kanban-workspaces`
-- Verify the devcontainer is running with correct mounts: `docker inspect vibebox-container | grep vibe-workspaces`
+- Verify the devcontainer is running with correct mounts: `docker inspect opencode-dev | grep vibe-workspaces`
 
 **Issue: Agent not responding**
-- Check container logs: `docker logs vibebox-container`
-- Verify opencode-ai is available: `docker exec vibebox-container which opencode-ai`
-- Test manual execution: `docker exec -it vibebox-container npx -y opencode-ai --version`
+- Check container logs: `docker logs opencode-dev`
+- Verify opencode-ai is available: `docker exec opencode-dev which opencode-ai`
+- Test manual execution: `docker exec -it opencode-dev npx -y opencode-ai --version`
 
 **Issue: Worktree path mismatches**
 - Vibe-kanban creates worktrees on host at `~/.vibe-kanban-workspaces/`
@@ -380,13 +352,13 @@ The workspace provides convenient sidebar access to all OpenKanban task branches
 ### Build Locally
 
 ```bash
-docker build -t vibebox-base:local .
+docker build -t opencode-base:local .
 ```
 
 ### Test Container
 
 ```bash
-docker run -it --rm vibebox-base:local
+docker run -it --rm opencode-base:local
 ```
 
 ## CI/CD Pipeline
@@ -419,4 +391,4 @@ MIT License - See [LICENSE](LICENSE) for details.
 2. Create a feature branch
 3. Submit a pull request
 
-For issues or questions, open a [GitHub Issue](https://github.com/dlouwers/vibebox-base/issues).
+For issues or questions, open a [GitHub Issue](https://github.com/dlouwers/opencode-base/issues).
