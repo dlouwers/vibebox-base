@@ -1,6 +1,10 @@
 {
   "name": "VibeBox",
-  "dockerFile": "Dockerfile",
+  "image": "dlouwers/vibebox-base:latest",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "initializeCommand": "bash .devcontainer/initialize-host.sh",
   "mounts": [
@@ -19,7 +23,6 @@
       ],
       "settings": {
         "terminal.integrated.defaultLocation": "editor",
-        // STOP VS Code from trying to restore dead terminals
         "terminal.integrated.enablePersistentSessions": false,
         "terminal.integrated.confirmOnExit": "never"
       }

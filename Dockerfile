@@ -1,36 +1,35 @@
-# VibeBox Base Image
-# Secure foundation for Vibe Coding agents
+FROM mcr.microsoft.com/devcontainers/javascript-node:20
 
-FROM mcr.microsoft.com/devcontainers/base:1-bookworm
+ARG TARGETARCH
 
-# OCI Labels
-LABEL org.opencontainers.image.source="https://github.com/dlouwers/vibebox-base"
-LABEL org.opencontainers.image.description="Secure base image for Vibe Coding agents with isolated tooling"
-LABEL org.opencontainers.image.licenses="MIT"
+# 1. Dynamically fetch arm64 for Apple Silicon, or amd64 for Intel/Windows
+RUN apt-get update && apt-get install -y jq tar \
+    && if [ "$TARGETARCH" = "arm64" ]; then \
+         ARCH_REGEX="(?i)linux.*arm64.*\\.tar\\.gz$"; \
+       else \
+         ARCH_REGEX="(?i)linux.*(amd64|x86_64).*\\.tar\\.gz$"; \
+       fi \
+    && ASSET_URL=$(curl -s https://api.github.com/repos/TechDufus/openkanban/releases/latest | jq -r --arg regex "$ARCH_REGEX" '.assets[] | select(.name | test($regex)) | .browser_download_url') \
+    && if [ -z "$ASSET_URL" ] || [ "$ASSET_URL" = "null" ]; then \
+         echo "Error: Failed to determine OpenKanban asset URL for architecture regex: $ARCH_REGEX" >&2; \
+         exit 1; \
+       fi \
+    && curl -fSL -o openkanban.tar.gz "$ASSET_URL" \
+    && tar -xzf openkanban.tar.gz -C /usr/local/bin/ openkanban \
+    && chmod +x /usr/local/bin/openkanban \
+    && rm openkanban.tar.gz
 
-# Install system dependencies
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get install -y --no-install-recommends \
-        nodejs \
-        npm \
-        build-essential \
-        ca-certificates \
-        curl \
-        git \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# 2. Pre-install oh-my-opencode CLI globally as root
+RUN npm install -g oh-my-opencode
 
-# Install Vibe tools globally
-RUN npm install -g opencode-ai vibebox oh-my-opencode
+# 3. Switch to the built-in non-root user to install OpenCode
+USER node
+RUN curl -fsSL https://opencode.ai/install | bash
 
-# Create sandbox workspace with open permissions
-RUN mkdir -p /workspaces && chmod 777 /workspaces
-
-# Copy security configuration
-COPY vibebox.toml /etc/vibebox.toml
-
-# Set working directory
-WORKDIR /workspaces
-
-# Default shell
-CMD ["/bin/bash"]
+# 4. Fix PATH for non-interactive shells (opencode installer only adds to .bashrc
+#    after the interactive guard, making it unreachable for scripts/docker exec)
+USER root
+RUN echo 'export PATH=/home/node/.opencode/bin:$PATH' > /etc/profile.d/opencode.sh \
+    && chmod +x /etc/profile.d/opencode.sh
+ENV PATH="/home/node/.opencode/bin:$PATH"
+USER node
